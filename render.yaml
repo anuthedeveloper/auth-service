@@ -1,0 +1,58 @@
+# Render Blueprint: https://render.com/docs/yaml-spec
+# Deploy: Render dashboard -> New -> Blueprint -> pick this repo. See docs/DEPLOYMENT.md.
+services:
+  - type: web
+    name: auth-service
+    runtime: docker
+    plan: free
+    region: oregon # pick the region closest to your Neon and Upstash databases
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: LOG_LEVEL
+        value: info
+      # Hops of reverse proxy in front of the app. Verify it (docs/DEPLOYMENT.md, "Client IPs").
+      - key: TRUST_PROXY
+        value: "1"
+      - key: RATE_LIMIT_STORE
+        value: redis
+
+      # Secrets and per-account values: Render asks for these when the Blueprint is created.
+      - key: DATABASE_URL # Neon DIRECT connection string (host without "-pooler")
+        sync: false
+      - key: REDIS_URL # Upstash TCP URL, starts with rediss://
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: APP_BASE_URL # https://<your-service>.onrender.com
+        sync: false
+      - key: CORS_ORIGIN
+        value: "*"
+
+      # Email. Render's free tier blocks outbound ports 25, 465 and 587, so use 2525 (see docs).
+      - key: EMAIL_TRANSPORT
+        value: smtp
+      - key: EMAIL_FROM # must be a sender your SMTP provider has verified
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "2525"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+
+      # Demo-friendly: no frontend exists to land the email links (see docs). Turn on with a real UI.
+      - key: REQUIRE_EMAIL_VERIFICATION
+        value: "false"
+      # Keep the Swagger UI public so the live demo is explorable.
+      - key: API_DOCS_ENABLED
+        value: "true"
